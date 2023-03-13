@@ -24,18 +24,25 @@ arena *create_arena(U64 capacity) {
 }
 
 void *arena_alloc(arena *a, U64 size) {
-    byte *mem = a->memory;
     U64 alloc_pos = a->size;
+    U64 capacity = a->capacity;
+    U64 new_pos = alloc_pos + size;
 
-    void *ptr = mem + alloc_pos;
-    a->size = alloc_pos + size;
+    if (new_pos < capacity) {
+        void *ptr = a->memory + alloc_pos;
+        a->size = new_pos;
+        return ptr;
+    }
+    return NULL;
 
-    return ptr;
 }
 
 void arena_free(arena *a, U64 size) {
     U64 alloc_pos = a->size;
     a->size = alloc_pos - size;
+    if (a->size < 0) {
+        a->size = 0;
+    }
 }
 
 
@@ -51,9 +58,14 @@ int main() {
     printf("This string was allocated on the arena: %.*s\n", 13, str);
 
     sleep(10); /* 10 seconds */
+    printf("now freeing all memory…\n");
 
     /* free the entire arena at once */
     free(a);
+
+    /* This would segvault now
+     * printf("This string was allocated on the arena: %.*s\n", 13, str);
+    */
 
     do {} while (1);
 }
