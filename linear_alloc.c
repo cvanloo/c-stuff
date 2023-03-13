@@ -1,3 +1,4 @@
+/* cat "/proc/$(pidof a.out)/statm"*/
 #include "types.h"
 #include <stdio.h>
 #include <stdlib.h>
@@ -63,6 +64,46 @@ void end_scratch(tmp_arena t) {
     t.a->size = t.restore_size;
 }
 
+/* //////////////////// */
+
+typedef struct entity entity;
+struct entity {
+    entity *next;
+    struct {
+        U32 x;
+        U32 y;
+    } position;
+    struct {
+        U32 x;
+        U32 y;
+    } velocity;
+    /* other data ... */
+};
+
+typedef struct game_state game_state;
+struct game_state {
+    arena *permanent_arena;
+    entity *first_free_entity;
+};
+
+entity *entity_alloc(game_state *state) {
+    entity *result = state->first_free_entity;
+    if (result != NULL) {
+        state->first_free_entity = state->first_free_entity->next;
+        memset(result, 0, sizeof(entity));
+    } else {
+        result = arena_alloc(state->permanent_arena, sizeof(entity));
+    }
+    return result;
+}
+
+void entity_free(game_state *state, entity* entity) {
+    entity->next = state->first_free_entity;
+    state->first_free_entity = entity;
+}
+
+/* //////////////////// */
+
 int main() {
     size_t alloc_size = GB(16);
     printf("%zu\n", alloc_size);
@@ -80,10 +121,35 @@ int main() {
     printf("This long string is on the scratch arena: %.*s\n", 50, longstr);
     end_scratch(tmp); /* release scratch arena */
 
+    /* /////////////////// */
+
+    game_state game;
+    game.permanent_arena = a;
+
+    /* Allocate some entities. */
+    int i;
+    printf("allocating entities…\n");
+    entity *entities[50000];
+    for (i = 0; i < 50000; ++i) {
+        entities[i] = entity_alloc(&game);
+    }
+    getchar();
+    printf("now freeing some entities…\n");
+    /* Free some of them. */
+    for (i = 0; i < 15000; ++i) {
+        entity* e = entities[i];
+        entity_free(&game, e);
+    }
+    getchar();
+    printf("now allocating some more entities…\n");
+    /* Allocate more entities. They will reuse the previously freed entities space. */
+    for (i = 0; i < 10000; ++i) {
+        entities[i] = entity_alloc(&game);
+    }
 
     /* /////////////////// */
 
-    sleep(10); /* 10 seconds */
+    getchar();
     printf("now freeing all memory…\n");
 
     /* free the entire arena at once */
@@ -93,5 +159,6 @@ int main() {
      * printf("This string was allocated on the arena: %.*s\n", 13, str);
     */
 
-    do {} while (1);
+    getchar();
+    printf("bye\n");
 }
