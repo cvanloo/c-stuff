@@ -17,11 +17,11 @@ typedef float F32;
 typedef double F64;
 typedef unsigned char byte;
 
-#define HEAD 1*sizeof(int)
-#define SIZE(s) ((int *)(s))[-1]
-#define SET_SIZE(s, z) ((int *)(s))[-1] = z
+#define HEAD 1*sizeof(U32)
+#define SIZE(s) ((U32 *)(s))[-1]
+#define SET_SIZE(s, z) ((U32 *)(s))[-1] = z
 
-char *create_string(unsigned int len) {
+char *create_string(U32 len) {
     char *str;
     void *mem = malloc(HEAD + len * sizeof(char));
     if (mem == NULL) return NULL;
