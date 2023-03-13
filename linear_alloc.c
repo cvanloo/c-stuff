@@ -46,16 +46,42 @@ void arena_free(arena *a, U64 size) {
 }
 
 
+typedef struct tmp_arena tmp_arena;
+struct tmp_arena {
+    arena *a;
+    U64 restore_size;
+};
+
+tmp_arena new_scratch(arena *a) {
+    tmp_arena t;
+    t.a = a;
+    t.restore_size = a->size;
+    return t;
+}
+
+void end_scratch(tmp_arena t) {
+    t.a->size = t.restore_size;
+}
+
 int main() {
     size_t alloc_size = GB(16);
     printf("%zu\n", alloc_size);
     arena *a = create_arena(alloc_size);
     printf("%p\n", (void*)a);
 
-    char* str = (char *) arena_alloc(a, 13*sizeof(char));
+    char *str = (char *) arena_alloc(a, 13*sizeof(char));
     memmove(str, "Hello, World!", 13);
 
     printf("This string was allocated on the arena: %.*s\n", 13, str);
+
+    tmp_arena tmp = new_scratch(a); /* create scratch arena */
+    char *longstr = arena_alloc(a, 50*sizeof(char));
+    memmove(longstr, "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA", 50);
+    printf("This long string is on the scratch arena: %.*s\n", 50, longstr);
+    end_scratch(tmp); /* release scratch arena */
+
+
+    /* /////////////////// */
 
     sleep(10); /* 10 seconds */
     printf("now freeing all memory…\n");
